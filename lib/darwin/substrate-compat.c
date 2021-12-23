@@ -12,6 +12,8 @@ void *SubGetImageByName(const char *filename) {
 EXPORT
 void *SubFindSymbol(void *image, const char *name) __asm__("SubFindSymbol");
 void *SubFindSymbol(void *image, const char *name) {
+    fprintf(stderr, "SubFindSymbol: starting - image: %#lx , name: %s , _dyld_image_count: %d \n", (long)image, name, _dyld_image_count());
+
     if (!image) {
         const char *s = "SubFindSymbol: 'any image' specified, which is incredibly slow - like, 2ms on a fast x86.  I'm going to do it since it seems to be somewhat common, but you should be ashamed of yourself.";
         syslog(LOG_WARNING, "%s", s);
@@ -19,6 +21,7 @@ void *SubFindSymbol(void *image, const char *name) {
         /* and it isn't thread safe, but neither is MS */
         for(uint32_t i = 0; i < _dyld_image_count(); i++) {
             const char *im_name = _dyld_get_image_name(i);
+            fprintf(stderr, "SubFindSymbol: _dyld_get_image_name(%d) , im_name: %s \n", i, im_name);  // wangchuanju 2021-12-03
             struct substitute_image *im = substitute_open_image(im_name);
             if (!im) {
                 fprintf(stderr, "(btw, couldn't open %s?)\n", im_name);
@@ -43,9 +46,12 @@ EXPORT
 void SubHookFunction(void *symbol, void *replace, void **result)
     __asm__("SubHookFunction");
 void SubHookFunction(void *symbol, void *replace, void **result) {
+    fprintf(stderr, "SubHookFunction: starting - symbol: %#lx , replace: %#lx \n", (long)symbol, (long)replace);
+
     struct substitute_function_hook hook = {symbol, replace, result};
     int ret = substitute_hook_functions(&hook, 1, NULL,
                                         SUBSTITUTE_NO_THREAD_SAFETY);
+    fprintf(stderr, "SubHookFunction: hook result - ret: %d , result: %#lx \n", ret, (long)*result);
     if (ret) {
         substitute_panic("SubHookFunction: substitute_hook_functions returned %s\n",
                          substitute_strerror(ret));

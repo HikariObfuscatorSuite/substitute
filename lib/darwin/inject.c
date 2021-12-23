@@ -13,7 +13,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-extern const struct dyld_all_image_infos *_dyld_get_all_image_infos();
+// not available any more.  wangchuanju 2021-12-23 
+//extern const struct dyld_all_image_infos *_dyld_get_all_image_infos();
 
 #define DEFINE_STRUCTS
 
@@ -104,7 +105,21 @@ static int find_foreign_images(mach_port_t task,
      * look up the symbols locally and don't have to do the rest of the
      * syscalls... not sure if this is any faster, but whatever. */
     if (FIELD(version) >= 13) {
-        const struct dyld_all_image_infos *local_aii = _dyld_get_all_image_infos();
+        //wangchuanju 2021-11-30 ++[
+        task_t task = current_task();
+        kern_return_t kr;
+        task_flavor_t flavor = TASK_DYLD_INFO;
+        task_dyld_info_data_t infoData;
+        mach_msg_type_number_t task_info_outCnt = TASK_DYLD_INFO_COUNT;
+        kr = task_info(task, flavor, (task_info_t) &infoData, &task_info_outCnt);
+        if (kr != KERN_SUCCESS) {
+            printf("Failed read task_info.\n");
+            return -1;
+        }
+        const struct dyld_all_image_infos *local_aii = (struct dyld_all_image_infos *) infoData.all_image_info_addr;
+        //wangchuanju 2021-11-30 ]++
+
+
         if (local_aii->version >= 13 &&
             FIELD(sharedCacheSlide) == local_aii->sharedCacheSlide &&
             !memcmp(FIELD(sharedCacheUUID), local_aii->sharedCacheUUID, 16)) {

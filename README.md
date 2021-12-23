@@ -1,1 +1,6 @@
-**Unmaintained.**  Please use someone else's fork...
+
+[Compile]
+./configure
+make -j6
+
+
